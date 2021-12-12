@@ -1,8 +1,7 @@
 use std::str;
-use petgraph::graph::{Graph,UnGraph,NodeIndex};
+use petgraph::graph::{UnGraph,NodeIndex};
 use petgraph::visit::EdgeRef;
 use std::ops::Add;
-use std::cell::RefCell;
 
 #[derive(Copy, Clone)]
 struct Node<'a>{
@@ -29,7 +28,7 @@ fn paths(g: &mut UnGraph<Node,()>, start: NodeIndex, end: NodeIndex) -> i64{
     if start == end {1}
     else{
         g.node_weight_mut(start).unwrap().visited = true;
-        let nexts: Vec<_> = g.edges(start).filter_map(|e|
+        let sum = g.edges(start).filter_map(|e|
             {
                 let node_id = e.target();
                 let next_node = g.node_weight(node_id).unwrap();
@@ -40,8 +39,7 @@ fn paths(g: &mut UnGraph<Node,()>, start: NodeIndex, end: NodeIndex) -> i64{
                     None
                 }
             }
-        ).collect();
-        let sum = nexts.into_iter().map(|next| {
+        ).collect::<Vec<_>>().into_iter().map(|next| {
             paths(g, next, end)
         }).reduce(i64::add).unwrap_or(0);
         g.node_weight_mut(start).unwrap().visited = false;
@@ -76,10 +74,6 @@ pub fn part1(input: &[u8]) -> i64 {
             print!("BIG CAVES!!!!!! Big cave adjacent to big cave!\n")
         }
     }
-
-    print!("{} nodes found\n", g.node_count());
-    print!("{} edges found\n", g.edge_count());
-
     paths(&mut g, start.unwrap(), end.unwrap())
 }
 
