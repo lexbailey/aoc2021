@@ -25,15 +25,14 @@ impl<'a> Node<'a>{
     }
 }
 
-fn paths(g: &RefCell<&mut UnGraph<Node,()>>, start: NodeIndex, end: NodeIndex) -> i64{
+fn paths(g: &mut UnGraph<Node,()>, start: NodeIndex, end: NodeIndex) -> i64{
     if start == end {1}
     else{
-        g.borrow_mut().node_weight_mut(start).unwrap().visited = true;
-        let nexts: Vec<_> = g.borrow().edges(start).filter_map(|e|
+        g.node_weight_mut(start).unwrap().visited = true;
+        let nexts: Vec<_> = g.edges(start).filter_map(|e|
             {
                 let node_id = e.target();
-                let bg= g.borrow();
-                let next_node = bg.node_weight(node_id).unwrap();
+                let next_node = g.node_weight(node_id).unwrap();
                 if next_node.is_big || !next_node.visited {
                     Some(node_id)
                 }
@@ -45,7 +44,7 @@ fn paths(g: &RefCell<&mut UnGraph<Node,()>>, start: NodeIndex, end: NodeIndex) -
         let sum = nexts.into_iter().map(|next| {
             paths(g, next, end)
         }).reduce(i64::add).unwrap_or(0);
-        g.borrow_mut().node_weight_mut(start).unwrap().visited = false;
+        g.node_weight_mut(start).unwrap().visited = false;
         sum
     }
 }
@@ -81,8 +80,7 @@ pub fn part1(input: &[u8]) -> i64 {
     print!("{} nodes found\n", g.node_count());
     print!("{} edges found\n", g.edge_count());
 
-    let g_ref = RefCell::new(&mut g);
-    paths(&g_ref, start.unwrap(), end.unwrap())
+    paths(&mut g, start.unwrap(), end.unwrap())
 }
 
 #[aoc(day12, part2)]
