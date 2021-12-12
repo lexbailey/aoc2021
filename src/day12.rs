@@ -29,21 +29,22 @@ fn paths(g: &RefCell<&mut UnGraph<Node,()>>, start: NodeIndex, end: NodeIndex) -
     if start == end {1}
     else{
         g.borrow_mut().node_weight_mut(start).unwrap().visited = true;
-        let sum = g.borrow().edges(start).map(|e|
+        let nexts: Vec<_> = g.borrow().edges(start).filter_map(|e|
             {
-                let next = e.target();
-                let next_node: Node;
-                {
-                    let bg = g.borrow();
-                    next_node = bg.node_weight(next).unwrap().clone();
-                }
+                let node_id = e.target();
+                let bg= g.borrow();
+                let next_node = bg.node_weight(node_id).unwrap();
                 if next_node.is_big || !next_node.visited {
-                    let s = paths(g, next, end);
-                    s
+                    Some(node_id)
                 }
-                else {0}
+                else {
+                    None
+                }
             }
-        ).reduce(i64::add).unwrap();
+        ).collect();
+        let sum = nexts.into_iter().map(|next| {
+            paths(g, next, end)
+        }).reduce(i64::add).unwrap_or(0);
         g.borrow_mut().node_weight_mut(start).unwrap().visited = false;
         sum
     }
