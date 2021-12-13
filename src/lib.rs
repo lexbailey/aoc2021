@@ -8,6 +8,7 @@ pub mod day3;
 pub mod day5;
 pub mod day9;
 pub mod day10;
+pub mod day11;
 pub mod day12;
 
 aoc_lib!{year=2021}
