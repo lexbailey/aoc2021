@@ -34,12 +34,12 @@ mod tests {
     use super::{part1, part2};
 
     #[test]
-    fn test1_1(){
+    fn test1(){
         assert_eq!(part1(b"16,1,2,0,4,2,7,1,2,14\n"), 37);
     }
 
     #[test]
-    fn test2_1(){
+    fn test2(){
         assert_eq!(part2(b"16,1,2,0,4,2,7,1,2,14\n"), 168);
     }
 }

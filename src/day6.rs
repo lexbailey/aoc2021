@@ -60,12 +60,12 @@ mod tests {
     use super::{part1, part2};
 
     #[test]
-    fn test1_1(){
+    fn test1(){
         assert_eq!(part1(b"3,4,3,1,2"), 5934);
     }
 
     #[test]
-    fn test2_1(){
+    fn test2(){
         assert_eq!(part2(b"3,4,3,1,2"), 26984457539);
     }
 }
