@@ -47,3 +47,18 @@ pub fn part2(input: &[u8]) -> i64 {
     let (_p1, p2) = both_parts(input);
     p2
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{part1, part2};
+
+    #[test]
+    fn test1(){
+        assert_eq!(part1(b"199\n200\n208\n210\n200\n207\n240\n269\n260\n263"), 7)
+    }
+
+    #[test]
+    fn test2(){
+        assert_eq!(part2(b"199\n200\n208\n210\n200\n207\n240\n269\n260\n263"), 5)
+    }
+}
