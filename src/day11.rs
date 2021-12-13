@@ -60,24 +60,6 @@ fn sim_step(g: &mut Vec<Vec<i64>>, w:usize, h:usize) -> i64{
     n_flash
 }
 
-fn debug_print_grid(grid: &Vec<Vec<i64>>){
-    let h = grid.len();
-    for y in 0..h{
-        let w = grid[y].len();
-        for x in 0..w{
-            if grid[y][x] >0{
-                print!("{},",grid[y][x]);
-            }
-            else{
-                print!(" ,");
-            }
-        }
-        print!("\n");
-    }
-    print!("\n");
-}
-
-
 #[aoc(day11, part1)]
 pub fn part1(input: &[u8]) -> i64 {
     let (mut grid, w, h) = build_grid(input);

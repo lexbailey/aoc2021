@@ -63,7 +63,7 @@ fn solve(input: &[u8], draw_fun: fn(grid: &mut Vec<Vec<i64>>, coords: &Vec<(i64,
     let c = coords(input);
     let (maxx, maxy) = limits(&c);
     let mut grid : Vec<Vec<i64>> = Vec::with_capacity(1+maxx as usize);
-    for x in 0..=maxx as usize {
+    for _ in 0..=maxx as usize {
         grid.push(vec![0; 1+maxy as usize]);
     }
     
