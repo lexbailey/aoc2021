@@ -92,7 +92,6 @@ pub fn part2(input: &[u8]) -> String {
     coords.sort_unstable();
     coords.dedup();
     let s = render(&coords);
-    print!("{}\n", s);
     s
 }
 
