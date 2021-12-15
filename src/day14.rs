@@ -16,7 +16,7 @@ fn parse(input: &[u8]) -> (&str, Vec<((u8,u8),[(u8,u8);2])>) {
 
 fn reduce_buckets(b: &Vec<((u8,u8), i64)>) -> Vec<((u8,u8),i64)>{
     let mut result: Vec<((u8,u8),i64)> = vec![];
-    let mut bucket_keys: Vec<(u8,u8)> = b.iter().map(|(k,v)|*k).collect();
+    let mut bucket_keys: Vec<(u8,u8)> = b.iter().map(|(k,_v)|*k).collect();
     bucket_keys.sort_unstable();
     bucket_keys.dedup();
     for k in bucket_keys{
@@ -75,7 +75,7 @@ fn simulate(input: &[u8], steps: i64) -> i64 {
     }
     let mut largest = 0;
     let mut smallest = std::i64::MAX;
-    for (c, count) in nz_counts{
+    for (_c, count) in nz_counts{
         if count > largest{
             largest = count;
         }
