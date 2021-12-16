@@ -58,14 +58,14 @@ fn build_graph(input: &[u8], reps: i32) -> (Graph<i32,i32>, NodeIndex, NodeIndex
 #[aoc(day15, part1)]
 pub fn part1(input: &[u8]) -> i32 {
     let (g, start, end) = build_graph(input, 1);
-    let path = algo::astar(&g, start, |n|n==end, |e|*e.weight(), |n|g[n]).unwrap();
+    let path = algo::astar(&g, start, |n|n==end, |e|*e.weight(), |_n|0).unwrap();
     path.0
 }
 
 #[aoc(day15, part2)]
 pub fn part2(input: &[u8]) -> i32 {
     let (g, start, end) = build_graph(input, 5);
-    let path = algo::astar(&g, start, |n|n==end, |e|*e.weight(), |n|g[n]).unwrap();
+    let path = algo::astar(&g, start, |n|n==end, |e|*e.weight(), |_n|0).unwrap();
     path.0
 }
 
