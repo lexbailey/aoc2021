@@ -278,7 +278,7 @@ pub fn part2(input: &[u8]) -> i64 {
 
 #[cfg(test)]
 mod tests {
-    use super::{part1, part2, matmul, RX90, RY90, transform, V3, rotations};
+    use super::{part1, both_parts, matmul, RX90, RY90, transform, V3, rotations};
     use std::collections::HashSet;
     use std::collections::hash_map::RandomState;
 
@@ -287,7 +287,6 @@ mod tests {
         ,V3::new(1,0,0)
         ,V3::new(0,1,0)
     ];
-
 
     #[test]
     fn test_matmul(){
@@ -306,8 +305,6 @@ mod tests {
         let rot_set: HashSet<V3,RandomState> = HashSet::from_iter(rots.into_iter());
         assert_eq!(rot_set.len(), 24);
     }
-
-    
 
     const TEST_INPUT: &[u8] = 
 b"--- scanner 0 ---
@@ -450,12 +447,8 @@ b"--- scanner 0 ---
     ;
 
     #[test]
-    fn test1(){
-        assert_eq!(part1(TEST_INPUT), 79);
-    }
-    #[test]
-    fn test2(){
-        assert_eq!(part2(TEST_INPUT), 3621);
+    fn test1and2(){
+        assert_eq!(both_parts(TEST_INPUT), (79, 3621));
     }
 
     const TEST_INPUT_SMALLER: &[u8] = 
