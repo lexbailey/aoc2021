@@ -2,11 +2,9 @@ use std::str;
 use std::fmt;
 use std::ops::Index;
 use std::cmp::{Eq,PartialEq};
-use std::array::IntoIter;
 use std::slice::Iter;
 use std::cmp::max;
 use std::collections::HashSet;
-use std::collections::hash_map::RandomState;
 
 #[derive(Debug,Clone,Copy,Hash)]
 struct V3{
@@ -20,10 +18,6 @@ impl V3{
         V3{
             x:x,y:y,z:z
         }
-    }
-
-    fn from_slice(slice: &[i64]) -> V3{
-        V3::new(slice[0], slice[1], slice[2])
     }
 
     fn from_str(input: &str) -> V3{
@@ -125,12 +119,6 @@ const RY90: [V3;3]= [
           ,V3::new(-1,0,0)
       ];
 
-const RZ90: [V3;3]= [
-          V3::new(0,-1,0)
-          ,V3::new(1,0,0)
-          ,V3::new(0,0,1)
-      ];
-
 fn matmul(a: &[V3;3], b:&[V3;3]) -> [V3;3]{
     (0..3).map(|i|
         V3::from_iter((0..3).map(|j|
@@ -141,13 +129,6 @@ fn matmul(a: &[V3;3], b:&[V3;3]) -> [V3;3]{
     ).collect()
 }
 
-const RX90Y90: [V3;3] = [
-        V3::new(0,0,1)
-        ,V3::new(1,0,0)
-        ,V3::new(0,1,0)
-    ];
-
-fn once(a:&[V3;3])->[V3;3]{*a}
 fn twice(a:&[V3;3])->[V3;3]{matmul(a,a)}
 fn thrice(a:&[V3;3])->[V3;3]{matmul(a, &twice(a))}
 
@@ -215,7 +196,6 @@ fn max_overlap(a: &Scanner, b: &Scanner) -> (i64, V3){
     for abeacon1 in a.beacon_iter().take(a.beacons.len()-11){
         for bbeacon1 in b.beacon_iter().take(b.beacons.len()-11){
             let delta = abeacon1.sub(&bbeacon1);
-            //print!("            Trying delta: {}\n", delta);
             let mut n: i64 = 0;
             for abeacon2 in a.beacon_iter(){
                 for bbeacon2 in b.beacon_iter(){
@@ -234,64 +214,80 @@ fn max_overlap(a: &Scanner, b: &Scanner) -> (i64, V3){
     (max_o, max_delta)
 }
 
-#[aoc(day19, part1)]
-pub fn part1(input: &[u8]) -> i64 {
+fn mdist(a:&V3, b:&V3) -> i64{
+    let d = b.sub(a);
+    (0..3).map(|i|d[i].abs()).sum()
+}
+
+pub fn both_parts(input: &[u8]) -> (i64, i64) {
     let mut scanners = parse_scanners(input);
-    print!("total beacons:{}\n", scanners.iter().map(|s|
-        s.beacons.len()
-    ).sum::<usize>());
 
     scanners[0].located = true; // first scanner is coordinate base
 
     while !scanners.iter().all(|s|s.located){
-        for i in (0..scanners.len()){
-            print!("Scanner {}\n", i);
-            for j in (0..scanners.len()){
+        for i in 0..scanners.len(){
+            for j in 0..scanners.len(){
                 if j<=i {continue}
                 // no information to gain by comparing located scanners
                 if scanners[i].located == scanners[j].located {continue}
-                print!("    Scanner {}\n", j);
                 let l = if scanners[i].located {i} else if scanners[j].located {j} else {unreachable!()};
                 let u = if l==i{j} else{i};
-                let mut r = 0;
                 for rot in rotations(){
                     scanners[u].transform = rot;
                     let (overlap, delta) = max_overlap(&scanners[l], &scanners[u]);
                     if overlap >= 12{
-                        print!("        Located {} relateive to {}\n", u, l);
                         scanners[u].translate = delta;
                         scanners[u].located = true;
                         break;
                     }
-                    r += 1;
                 }
             }
         }
     }
 
     let mut beacons: HashSet<V3> = HashSet::new();
-    for scanner in scanners{
+    for scanner in &scanners{
         for beacon in scanner.beacon_iter(){
             beacons.insert(beacon);
         }
     }
     
-    for b in &beacons{
-        print!("{}\n",b);
+    let n_beacons = beacons.len() as i64;
+
+    let mut max_dist = 0;
+    for i in 0..scanners.len(){
+        for j in 0..scanners.len(){
+            if j<=i {continue}
+            let dist = mdist(&scanners[i].translate, &scanners[j].translate);
+            max_dist = max(max_dist, dist);
+        }
     }
-    beacons.len() as i64
+    
+    (n_beacons, max_dist)
+}
+
+#[aoc(day19, part1)]
+pub fn part1(input: &[u8]) -> i64 {
+    both_parts(input).0
 }
 
 #[aoc(day19, part2)]
 pub fn part2(input: &[u8]) -> i64 {
-    0
+    both_parts(input).1
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{part1, part2, matmul, RX90, RY90, RX90Y90, transform, V3, rotations};
+    use super::{part1, part2, matmul, RX90, RY90, transform, V3, rotations};
     use std::collections::HashSet;
     use std::collections::hash_map::RandomState;
+
+    const RX90Y90: [V3;3] = [
+        V3::new(0,0,1)
+        ,V3::new(1,0,0)
+        ,V3::new(0,1,0)
+    ];
+
 
     #[test]
     fn test_matmul(){
@@ -456,6 +452,10 @@ b"--- scanner 0 ---
     #[test]
     fn test1(){
         assert_eq!(part1(TEST_INPUT), 79);
+    }
+    #[test]
+    fn test2(){
+        assert_eq!(part2(TEST_INPUT), 3621);
     }
 
     const TEST_INPUT_SMALLER: &[u8] = 
