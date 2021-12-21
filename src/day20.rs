@@ -34,8 +34,6 @@ fn step_img(img: &Vec<Vec<u8>>, lut: &Vec<u8>, inf_pixel: u8) -> (Vec<Vec<u8>>, 
     for y in -1..=in_h as i32{
         let mut line = Vec::with_capacity(out_w);
         for x in -1..=in_w as i32{
-            let ox = x+1;
-            let oy = y+1;
             let mut index: u32 = 0;
             for (dx, dy) in NINE_D{
                 let rx = x +dx;
