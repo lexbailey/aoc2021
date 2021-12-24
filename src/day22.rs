@@ -168,7 +168,6 @@ mod tests {
         let v1 = vec![0..=9, 0..=9, 0..=9];
         let v2 = vec![2..=7, 2..=7, 2..=7];
         let v1_vol = volume(&v1);
-        let v2_vol = volume(&v2);
         let overlap = vol_overlap(&v1, &v2);
         let overlap_vol = volume(&overlap);
         let parts = vol_subtract(&v1, &v2);
@@ -182,7 +181,6 @@ mod tests {
         let v1 = vec![10..=12, 10..=12, 10..=12];
         let v2 = vec![11..=13, 11..=13, 11..=13];
         let v1_vol = volume(&v1);
-        let v2_vol = volume(&v2);
         let overlap = vol_overlap(&v1, &v2);
         let overlap_vol = volume(&overlap);
         let parts = vol_subtract(&v1, &v2);
@@ -196,7 +194,6 @@ mod tests {
         let v1 = vec![10..=10, 10..=12, 10..=12];
         let v2 = vec![9..=11, 9..=11, 9..=11];
         let v1_vol = volume(&v1);
-        let v2_vol = volume(&v2);
         let overlap = vol_overlap(&v1, &v2);
         let overlap_vol = volume(&overlap);
         let parts = vol_subtract(&v1, &v2);
