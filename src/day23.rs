@@ -1,4 +1,3 @@
-use std::str;
 use std::cmp::min;
 
 fn cost(c: u8) -> i64 {
@@ -11,10 +10,7 @@ fn cost(c: u8) -> i64 {
     }
 }
 
-fn path_blocked(c: [u8;7], h: [u8;4], t: [u8;4], from: usize, to: usize) -> bool{
-    //if  h[to]!=9 {
-    //    return true;
-    //}
+fn path_blocked(c: [u8;7], from: usize, to: usize) -> bool{
     match (from, to){
          (0,0) => c[1]!=9
         ,(0,1) => c[1]!=9||c[2]!=9
@@ -94,7 +90,7 @@ fn steps(from: usize, to: usize) -> i64{
     }
 }
 
-fn shortest_path(corridor: [u8;7], room_head: [u8;4], room_tail: [u8;4], depth: &String) -> Option<i64>{
+fn shortest_path(corridor: [u8;7], room_head: [u8;4], room_tail: [u8;4]) -> Option<i64>{
     assert!(
         (corridor.iter().filter(|c|**c!=9).count() +
         [room_head, room_tail].iter().flatten().filter(|c|**c!=9).count()) == 8
@@ -116,7 +112,7 @@ fn shortest_path(corridor: [u8;7], room_head: [u8;4], room_tail: [u8;4], depth: 
             let h = p as usize;
             if room_tail[h] != 9 && room_head[h] != 9 { continue; }
             if room_tail[h] != 9 && room_tail[h] != p { continue; }
-            if !path_blocked(corridor, room_head, room_tail, c, h) && room_head[h] == 9{
+            if !path_blocked(corridor, c, h) && room_head[h] == 9{
                 let mut new_corridor = corridor;
                 new_corridor[c] = 9;
                 let mut new_head = room_head;
@@ -131,7 +127,7 @@ fn shortest_path(corridor: [u8;7], room_head: [u8;4], room_tail: [u8;4], depth: 
                 }
                 let cost = step_cost * distance;
                 did_step = true;
-                if let Some(subpath) = shortest_path(new_corridor, new_head, new_tail, &(depth.to_owned() + "    ")){
+                if let Some(subpath) = shortest_path(new_corridor, new_head, new_tail){
                     let tot_cost = cost + subpath;
                     min_cost = min_cost.and_then(|m|Some(min(m, tot_cost))).or(Some(tot_cost))
                 }
@@ -149,7 +145,7 @@ fn shortest_path(corridor: [u8;7], room_head: [u8;4], room_tail: [u8;4], depth: 
             let p = p;
             let step_cost = cost(p);
             for c in 0..=6{
-                if path_blocked(corridor, room_head, room_tail, c, r as usize) { continue; }
+                if path_blocked(corridor, c, r as usize) { continue; }
                 let mut new_corridor = corridor;
                 if new_corridor[c as usize] != 9{
                     continue;
@@ -166,7 +162,7 @@ fn shortest_path(corridor: [u8;7], room_head: [u8;4], room_tail: [u8;4], depth: 
                     distance += 1;
                 }
                 let cost = step_cost * distance;
-                if let Some(subpath) = shortest_path(new_corridor, new_head, new_tail, &(depth.to_owned() + "    ")){
+                if let Some(subpath) = shortest_path(new_corridor, new_head, new_tail){
                     let tot_cost = cost + subpath;
                     min_cost = min_cost.and_then(|m|Some(min(m, tot_cost))).or(Some(tot_cost))
                 }
@@ -178,7 +174,7 @@ fn shortest_path(corridor: [u8;7], room_head: [u8;4], room_tail: [u8;4], depth: 
 
 #[aoc(day23, part1)]
 pub fn part1(input: &[u8]) -> i64 {
-    let mut corridor = [9;7];
+    let corridor = [9;7];
     let mut room_head = [9;4];
     let mut room_tail = [9;4];
     room_head[0] = input[31]-65;
@@ -191,7 +187,7 @@ pub fn part1(input: &[u8]) -> i64 {
     room_tail[2] = input[49]-65;
     room_tail[3] = input[51]-65;
 
-    if let Some(a) = shortest_path(corridor, room_head, room_tail, &"".to_owned()) {
+    if let Some(a) = shortest_path(corridor, room_head, room_tail) {
         a
     }
     else{
