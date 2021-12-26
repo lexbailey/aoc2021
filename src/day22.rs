@@ -80,6 +80,7 @@ fn compute_volume(input: &[u8], filter: bool) -> i64 {
         parse_volume(&l[3..])
     ));
 
+    // TODO that bool is always true, get rid of it
     let mut vols: Vec<(bool, Volume)> = Vec::new();
 
     for (set_state, s) in steps{
