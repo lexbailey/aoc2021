@@ -91,17 +91,15 @@ fn steps(from: usize, to: usize) -> i64{
 }
 
 fn shortest_path(corridor: [u8;7], room_head: [u8;4], room_tail: [u8;4]) -> Option<i64>{
-    assert!(
-        (corridor.iter().filter(|c|**c!=9).count() +
-        [room_head, room_tail].iter().flatten().filter(|c|**c!=9).count()) == 8
-    );
-    if corridor == [9;7]{
-        if (0..=3).all(|i|{
-            room_head[i] as usize == i
-            && room_tail[i] as usize == i
-        }) {
-            return Some(0);
-        }
+    //assert!(
+    //    (corridor.iter().filter(|c|**c!=9).count() +
+    //    [room_head, room_tail].iter().flatten().filter(|c|**c!=9).count()) == 8
+    //);
+    if (0..=3).all(|i|{
+        room_head[i] as usize == i
+        && room_tail[i] as usize == i
+    }) {
+        return Some(0);
     }
     let mut min_cost: Option<i64> = None;
     let mut did_step = false;
