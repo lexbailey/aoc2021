@@ -91,10 +91,10 @@ fn steps(from: usize, to: usize) -> i64{
 }
 
 fn shortest_path(corridor: [u8;7], rooms: &mut[&mut Vec<u8>;4], room_size: usize) -> Option<i64>{
-    assert!(
-        (corridor.iter().filter(|c|**c!=9).count() +
-        rooms.iter().map(|room|room.iter().filter(|c|**c!=9).count()).sum::<usize>()) == room_size*4
-    );
+    //assert!(
+    //    (corridor.iter().filter(|c|**c!=9).count() +
+    //    rooms.iter().map(|room|room.iter().filter(|c|**c!=9).count()).sum::<usize>()) == room_size*4
+    //);
     if (0..=3).all(|i|{
         rooms[i].len()==room_size &&
         rooms[i].iter().all(|c|*c as usize==i)
