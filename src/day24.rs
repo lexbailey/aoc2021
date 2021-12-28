@@ -3,6 +3,7 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 use std::fmt::Debug;
 use std::cmp::{min,max};
+use std::ops::{Div, Sub, Mul};
 
 #[derive(Copy,Clone,Debug)]
 enum Val{
@@ -181,6 +182,17 @@ fn simplify(expr: &Expr) -> Expr{
             ,(Constant(a), Constant(b)) => Constant(a*b)
             ,(Bounded(a_min, a_max, bexpr), Constant(b)) => simplify(&Bounded(a_min*b, a_max*b, Box::new(simplify(&Product(bexpr.clone(), Box::new(Constant(*b)))))))
             ,(Constant(b), Bounded(a_min, a_max, bexpr)) => simplify(&Bounded(a_min*b, a_max*b, Box::new(simplify(&Product(Box::new(Constant(*b)), bexpr.clone())))))
+            ,(Bounded(a_min, a_max, aexpr), Bounded(b_min, b_max, bexpr)) => {
+                let c1 = a_min * b_min;
+                let c2 = a_max * b_min;
+                let c3 = a_min * b_max;
+                let c4 = a_max * b_max;
+                let low = min(min(c1,c2),min(c3,c4));
+                let high = max(max(c1,c2),max(c3,c4));
+                simplify(
+                    &Bounded(low, high, Box::new(simplify(&Product(aexpr.clone(), bexpr.clone()))))
+                )
+            }
             ,_=>expr.clone()
         } 
         ,Sum(a,b) => match (&**a, &**b){
@@ -200,6 +212,7 @@ fn simplify(expr: &Expr) -> Expr{
         }
         ,Remainder(a,b) => match (&**a, &**b){
             (Constant(a), Constant(b)) => Constant(a%b)
+            ,(Bounded(min_, max_, aexpr), Constant(b)) if b > max_ => simplify(a)
             ,(Bounded(min_, max_, aexpr), Constant(b)) => simplify(&Bounded(if max_ > b {0} else {*min_}, min(*max_,b-1), Box::new(Remainder(aexpr.clone(), Box::new(Constant(*b))))))
             ,(a, Constant(b)) => simplify(&Bounded(0, b-1, Box::new(Remainder(Box::new(a.clone()), Box::new(Constant(*b))))))
             ,_=>expr.clone()
@@ -215,10 +228,103 @@ fn simplify(expr: &Expr) -> Expr{
     }
 }
 
-fn noop_elim(program: &Vec<Op>, input_bounds: Option<(i64,i64)>) -> Vec<Op>{
+
+#[derive(PartialEq,Copy,Clone,Debug)]
+enum Symbol{
+    Unknown()
+    ,Exact(i64)
+    ,Range(i64, i64)
+    ,NotEqual(i64)
+}
+
+impl Mul for Symbol{
+    type Output = Symbol;
+    fn mul(self, rhs: Symbol) -> Self::Output{
+        use Symbol::*;
+        match (self, rhs) {
+            (Unknown(), _) => Unknown()
+            ,(_, Unknown()) => Unknown()
+            ,(_, Exact(0)) => Exact(0)
+            ,(Exact(0), _) => Exact(0)
+            ,(Exact(a), Exact(b)) => Exact(a*b)
+            ,(Exact(a), Range(min, max)) => Range(a*min, a*max)
+            ,(Range(min, max), Exact(a)) => Range(min*a, max*a)
+            ,(Range(mina, maxa), Range(minb, maxb)) => Range(mina*minb,maxa*maxb)
+            ,(NotEqual(a), Exact(b)) => NotEqual(a*b)
+            ,(Exact(a), NotEqual(b)) => NotEqual(a*b)
+            ,_ => Unknown()
+        }
+    }
+}
+
+impl Div for Symbol{
+    type Output = Symbol;
+    fn div(self, rhs: Symbol) -> Self::Output{
+        use Symbol::*;
+        match (self, rhs) {
+            (Unknown(), _) => Unknown()
+            ,(_, Unknown()) => Unknown()
+            ,(_, Exact(0)) => Unknown()
+            ,(Exact(a), Exact(b)) => Exact(a/b)
+            ,(Exact(a), Range(min, max)) if 0 >= min && 0 <= max => Unknown()
+            ,(Exact(a), Range(min, max)) => Range(a/min, a/max)
+            ,(Range(min, max), Exact(a)) => Range(min/a, max/a)
+            ,(Range(mina, maxa), Range(minb, maxb)) => {
+                if minb == 0 || maxb == 0{
+                    if mina == 0 && minb == 0{
+                        Range(0, maxa/maxb)
+                    }
+                    else{
+                        Unknown()
+                    }
+                }
+                else{
+                    Range(mina/maxb,maxa/minb)
+                }
+            }
+            ,(NotEqual(a), Exact(b)) => NotEqual(a/b)
+            ,(Exact(a), NotEqual(b)) => NotEqual(a/b)
+            ,_ => Unknown()
+        }
+    }
+}
+
+impl Sub for Symbol{
+    type Output = Symbol;
+    fn sub(self, rhs: Symbol) -> Self::Output{
+        use Symbol::*;
+        match (self, rhs) {
+            (Unknown(), _) => Unknown()
+            ,(_, Unknown()) => Unknown()
+            ,(Exact(a), Exact(b)) => Exact(a-b)
+            ,(Exact(a), Range(min, max)) => Range(a-min, a-max)
+            ,(Range(min, max), Exact(a)) => Range(min-a, max-a)
+            ,(Range(mina, maxa), Range(minb, maxb)) => Range(mina-maxb,maxa-minb)
+            ,(NotEqual(a), Exact(b)) => NotEqual(a-b)
+            ,(Exact(a), NotEqual(b)) => NotEqual(a-b)
+            ,_ => Unknown()
+        }
+    }
+}
+
+fn sym_hints(exprs: &[Expr;4]) -> [Symbol;4]{
+    use Symbol::*;
+    use Expr::*;
+    let mut result = [Unknown();4];
+    for i in 0..=3{
+        result[i] = match exprs[i]{
+            Constant(a) => Exact(a)
+            ,Bounded(min, max, _) => Range(min, max)
+            ,_ => Unknown()
+        }
+    }
+    result
+}
+
+fn annotate(program: &Vec<Op>, input_bounds: Option<(i64,i64)>) -> Vec<(Op, [Symbol;4])>{
     const START_STATE: Expr = Expr::Constant(0);
     let mut reg_states = [START_STATE;4];
-    let mut result: Vec<Op> = Vec::new();
+    let mut result: Vec<(Op, [Symbol;4])> = Vec::new();
     let expr = |v,regs:&[Expr;4]|{
         match v{
             Val::Num(a) => Expr::Constant(a)
@@ -253,39 +359,105 @@ fn noop_elim(program: &Vec<Op>, input_bounds: Option<(i64,i64)>) -> Vec<Op>{
         }
         else{
             //println!("{} After executing {:?}: {:?}", line, op, reg_states);
-            println!("{}: {:?}", line, op);
+            let hints = sym_hints(&reg_states);
+            println!("{}: {:?} {:?}", line, op, hints);
             line += 1;
-            result.push(op.clone());
+            result.push((op.clone(), hints));
         }
     }
-    println!("{:?}", reg_states[3]);
+    //println!("{:?}", reg_states[3]);
     result
 }
-/*
-fn rev_exec(program, finals:[Option(i64);4]) -> {
-    let mut states = finals;
-    let mut in_n = 0;
-    for op in program.rev(){
-        match op{
-            Op::Inp(a) => {
-                println!("Input end-{} = {}", in_n, states[a]);
-                in_n += 1;
+
+fn merge_symbols(a: Symbol, b: Symbol) -> Symbol{
+    use Symbol::*;
+    match (a, b){
+        (Unknown(), b) => b
+        ,(a, Unknown()) => a
+        ,(Exact(a), _) => Exact(a)
+        ,(_, Exact(b)) => Exact(b)
+        ,(Range(mina, maxa), Range(minb, maxb)) => {
+            let low = max(mina, minb);
+            let high = min(maxa, maxb);
+            if low == high {
+                Exact(low)
             }
-            ,Op::Add(a,b) => {
-                match (states[a], states[b]){
-                    (Some(sa), Some(sb)) => {states[a] = Some(sa - sb)}
-                    (None, Some(sb)) => {states[a] = Some(sa - sb)}
-                }
+            else{
+                Range(low, high)
             }
         }
+        ,_ => a
     }
 }
-*/
+
+fn rev_exec(program: Vec<(Op, [Symbol;4])>, finals:[Symbol;4]) -> Vec<Symbol> {
+    let mut states = finals;
+    let mut in_n = 0;
+    use Op::*;
+    use Symbol::*;
+    use Val::*;
+    let mut inputs: Vec<Symbol> = Vec::new();
+    println!("{:?}", states);
+    for (op, hints) in program.iter().rev(){
+        println!("{:?}", op);
+        for i in 0..=3{
+            states[i] = merge_symbols(hints[i], states[i]);
+        }
+        //println!("State with pre-hints: {:?}", states);
+        match op{
+            Inp(a) => {
+                //println!("Input end-{} = {:?}", in_n, states[*a]);
+                in_n += 1;
+                inputs.push(states[*a]);
+            }
+            ,Mul(a,b) => {
+                let this = states[*a];
+                let other = match b { Reg(b) => states[*b] ,Num(n) => Exact(*n) };
+                states[*a] = this/other;
+            }
+            ,Div(a,b) => {
+                let this = states[*a];
+                let other = match b { Reg(b) => states[*b] ,Num(n) => Exact(*n) };
+                states[*a] = this*other;
+            }
+            ,Mod(a,b) =>{
+                //let this = states[*a];
+                //let other = match b { Reg(b) => states[*b] ,Num(n) => Exact(*n) };
+                states[*a] = Unknown()
+            }
+            ,Eql(a,b) => {
+                let this = states[*a];
+                let other = match b { Reg(b) => states[*b] ,Num(n) => Exact(*n) };
+                states[*a] = match this{
+                    Exact(1) => other
+                    ,Exact(0) => match other {
+                        Exact(b) => NotEqual(b)
+                        ,_ => Unknown()
+                    }
+                    _ => Unknown()
+                }
+            }
+            ,Add(a,b) => {
+                let this = states[*a];
+                let other = match b { Reg(b) => states[*b] ,Num(n) => Exact(*n) };
+                states[*a] = this - other;
+            }
+            ,_ => {panic!("not implemented");}
+        }
+        println!("New states:       {:?}", states);
+    }
+    inputs.reverse();
+    inputs
+}
+
 #[aoc(day24, part1)]
 pub fn part1(input: &str) -> i64 {
     let monad = parse_program(input); // monad is a silly name for this thing <_<
-    let monad = noop_elim(&monad, Some((1,9)));
-    //rev_exec(monad);
+    let monad = annotate(&monad, Some((1,9)));
+    use Symbol::*;
+    let outputs = [Unknown(), Unknown(), Unknown(), Exact(0)];
+    let inputs = rev_exec(monad, outputs);
+    println!("{:?}", inputs);
     /*
     let nums = vec![1..9;14];
     let mut id: i64 = 11111111111111;
@@ -315,7 +487,7 @@ pub fn part2(input: &[u8]) -> i64 {
 
 #[cfg(test)]
 mod tests {
-    use super::{part1, part2, run, parse_program};
+    use super::{part1, part2, run, parse_program, Symbol, rev_exec};
 
     #[test]
     fn test_a(){
@@ -345,7 +517,43 @@ eql z x
         assert_eq!(result2.regs[3], 0);
     }
 
+    #[test]
+    fn test_rev_1(){
+        use Symbol::*;
+        let prog =
+"inp x
+mul x 3
+";
+        let instrs = parse_program(prog);
+        let outputs = [Unknown(), Exact(12), Unknown(), Unknown()];
+        let result = rev_exec(instrs, outputs);
+        assert_eq!(result[0], Exact(4));
+    }
 
+    #[test]
+    fn test_rev_2(){
+        use Symbol::*;
+        let prog =
+"inp x
+inp y
+mul x 3
+mul y 0
+add y x
+eql y 12
+";
+        let instrs = parse_program(prog);
+        let outputs = [Unknown(), Exact(12), Exact(1), Unknown()];
+        let result = rev_exec(instrs, outputs);
+        assert_eq!(result[0], Exact(4));
+        assert_eq!(result[1], Unknown());
+
+        let instrs = parse_program(prog);
+        let outputs = [Unknown(), Exact(6), Exact(0), Unknown()];
+        let result = rev_exec(instrs, outputs);
+        assert_eq!(result[0], Exact(2));
+        assert_eq!(result[1], Unknown());
+
+    }
 
     #[test]
     fn test2(){
